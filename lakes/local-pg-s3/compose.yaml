@@ -1,0 +1,73 @@
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      # Hardcoded dev defaults so `docker compose up` works with no .env file.
+      # THESE ARE PUBLIC DEV DEFAULTS – do NOT use in production.
+      # Override via environment or a `.env` file (see .env.example).
+      POSTGRES_USER: ${POSTGRES_USER:-ducklake}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-ducklake}
+      POSTGRES_DB: ${POSTGRES_DB:-ducklake_catalog}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  garage:
+    image: dxflrs/garage:v2.1.0
+    # Server command is the image default (CMD ["/garage", "server"]),
+    # spelled out here so `exec`-based init is obvious.
+    entrypoint: ["/garage"]
+    command: ["server"]
+    environment:
+      # Overrides rpc_secret in garage.toml (see image --help).
+      # Dev default only – generate a fresh one for anything real:
+      #   openssl rand -hex 32
+      GARAGE_RPC_SECRET: ${GARAGE_RPC_SECRET:-1799bccfd7411eddcf9ebd316bc1f5287ad12a68094e1c6ac6abde7e6feae1ec}
+      GARAGE_CONFIG_FILE: /etc/garage.toml
+    ports:
+      - "${GARAGE_S3_PORT:-3900}:3900" # S3 API
+      - "${GARAGE_WEB_PORT:-3902}:3902" # web / admin
+      # RPC is intentionally NOT published: layout admin runs via `exec`.
+    volumes:
+      - ./garage.toml:/etc/garage.toml:ro
+      - garagemeta:/var/lib/garage/meta
+      - garagedata:/var/lib/garage/data
+    healthcheck:
+      # `garage status` exits 0 once the daemon answers.
+      test: ["CMD", "/garage", "status"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+
+  # One-shot seed: creates the DuckLake (postgres catalog + S3 storage) and
+  # inserts the demo data. Runs on the compose network, so seed.sql can use
+  # the service names `postgres` / `garage` as hostnames.
+  # Run with: docker compose run --rm seed
+  # (start only the infra with `up -d postgres garage`, then run
+  # `./scripts/garage-init.sh` first)
+  seed:
+    image: duckdb/duckdb:latest
+    entrypoint: ["/duckdb"]
+    user: "${UID:-1000}:${GID:-1000}"
+    environment:
+      HOME: /tmp
+    depends_on:
+      postgres:
+        condition: service_healthy
+      garage:
+        condition: service_healthy
+    command: ["-bail", "-echo", "-f", "/seed/seed.sql"]
+    volumes:
+      - ./seed.sql:/seed/seed.sql:ro
+    restart: on-failure
+
+volumes:
+  pgdata:
+  garagemeta:
+  garagedata:

@@ -1,0 +1,35 @@
+services:
+  # One-shot init: creates / seeds the DuckLake if it does not exist yet.
+  # Run with: docker compose -f lakes/local/compose.yaml up init
+  # (or: docker compose -f lakes/local/compose.yaml run --rm init)
+  init:
+    image: duckdb/duckdb:latest
+    entrypoint: ["/duckdb"]
+    # Run as the host user so files in ./data stay owned by you, not root.
+    user: "${UID:-1000}:${GID:-1000}"
+    # -bail stops on first error, -f runs the seed script.
+    # The empty `:memory:` database is only used to run the ATTACH statements
+    # inside init.sql (the lake itself lives in /data).
+    command: ["-bail", "-echo", "-f", "/init/init.sql"]
+    environment:
+      HOME: /tmp
+    volumes:
+      - ./data:/data
+      - ./init.sql:/init/init.sql:ro
+    working_dir: /data
+
+  # Interactive DuckDB shell against the same lake.
+  # Run with: docker compose -f lakes/local/compose.yaml run --rm cli
+  cli:
+    image: duckdb/duckdb:latest
+    entrypoint: ["/duckdb"]
+    user: "${UID:-1000}:${GID:-1000}"
+    environment:
+      HOME: /tmp
+    stdin_open: true
+    tty: true
+    volumes:
+      - ./data:/data
+      - ./init.sql:/init/init.sql:ro
+      - ./queries.sql:/queries/queries.sql:ro
+    working_dir: /data

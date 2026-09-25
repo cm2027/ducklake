@@ -1,0 +1,26 @@
+# managed by this repo – local DuckDB artifacts, lake data, secrets
+data/
+*.ducklake
+*.ducklake.files/
+*.ducklake.wal
+.env
+__pycache__/
+.venv/
+venv/
+node_modules/
+target/
+*.class
+.idea/
+.vscode/
+*.log
+.DS_Store
+# garage / postgres volumes are handled by docker named volumes, nothing to ignore
+# python
+*.pyc
+# go
+/bin/
+# java / maven / eclipse
+*.jar
+.project
+.classpath
+.settings/

@@ -1,0 +1,25 @@
+# Garage single-node config for local dev.
+# The rpc_secret below is a default: compose.yaml overrides it at runtime
+# via the GARAGE_RPC_SECRET env var (same dev default), so nothing needs
+# to be configured for a first run.
+replication_factor = 1
+consistency_mode = "consistent"
+
+metadata_dir = "/var/lib/garage/meta"
+data_dir = "/var/lib/garage/data"
+
+rpc_bind_addr = "[::]:3901"
+rpc_public_addr = "127.0.0.1:3901"
+rpc_secret = "1799bccfd7411eddcf9ebd316bc1f5287ad12a68094e1c6ac6abde7e6feae1ec"
+
+bootstrap_peers = []
+
+[s3_api]
+s3_region = "garage"
+api_bind_addr = "[::]:3900"
+root_domain = ".s3.garage"
+
+[s3_web]
+bind_addr = "[::]:3902"
+root_domain = ".web.garage"
+index = "index.html"

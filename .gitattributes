@@ -1,0 +1,5 @@
+# Normalize line endings cross-platform, but keep shell scripts LF-only
+# (bash breaks on CRLF; Git Bash/WSL/macOS/Linux all want LF here).
+* text=auto
+*.sh text eol=lf
+*.ps1 text eol=crlf
