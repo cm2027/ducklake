@@ -1,7 +1,7 @@
 # ducklake examples for cm2027
 
 > [!NOTE]
-> TODO: explain better how to use
+> TODO: explain better how to use & restructure
 
 In this repository you will find examples for how to use ducklake.
 
