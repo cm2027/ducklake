@@ -1,5 +1,8 @@
 # ducklake examples for cm2027
 
+> [!NOTE]
+> TODO: explain better how to use
+
 In this repository you will find examples for how to use ducklake.
 
 There are multiple different ways of running ducklake, this repo showcases two different ways:
@@ -22,11 +25,10 @@ Client examples in `Java` and `Python` live under [`cmd/`](cmd/).
   containers (or docker-ce installed in WSL2); on macOS/Linux, Docker Engine (or Desktop) is fine.
 - Nothing else for the lakes: no `.env` file, no cloud accounts. All
   credentials are hardcoded dev defaults (do NOT use in production).
-- To run the **Python** client: `python3` (3.10+). A venv is created below –
-  never install system-wide.
+- To run the **Python** client: `python3` (3.10+). A venv is created below.
 - To run the **Java** client: JDK 17+ and Maven (`mvn -version`).
 
-## Quickstart – macOS / Linux (bash)
+## Quickstart macOS / Linux (bash)
 
 ```bash
 # 0. clone and enter the repo
