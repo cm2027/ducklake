@@ -27,48 +27,6 @@ public class App {
   static final String S3_SECRET = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";
   static final String DATA_PATH = "s3://ducklake-data/data/";
 
-  /** Which lake to use + where the local lake lives. */
-  record Config(String lake, String localPath) {
-  }
-
-  /** Parse --key value / --key=value args (unknown args fail fast). */
-  static Config parseArgs(String[] args) {
-    Path appDir = null;
-
-    try {
-      appDir = Path.of(App.class.getProtectionDomain()
-          .getCodeSource()
-          .getLocation()
-          .toURI()).resolve("../../").normalize();
-    } catch (URISyntaxException e) {
-      throw new RuntimeException("unable to get fs path for App class.", e);
-    }
-    String lake = "local";
-    String localPath = appDir.resolve("../../lakes/local/data/my_ducklake.ducklake").toString();
-    for (int i = 0; i < args.length; i++) {
-      String[] kv = args[i].split("=", 2);
-      String key = kv[0];
-      String value = kv.length > 1 ? kv[1] : (i + 1 < args.length ? args[++i] : null);
-      if (value == null) {
-        throw new IllegalArgumentException("Missing value for " + key);
-      }
-      switch (key) {
-        case "--lake":
-          lake = value;
-          break;
-        case "--local-path":
-          localPath = value;
-          break;
-        default:
-          throw new IllegalArgumentException("Unknown argument: " + key);
-      }
-    }
-    if (!lake.equals("local") && !lake.equals("pg")) {
-      throw new IllegalArgumentException("--lake must be 'local' or 'pg'");
-    }
-    return new Config(lake, localPath);
-  }
-
   static String q(String s) {
     return "'" + s.replace("'", "''") + "'";
   }
@@ -107,7 +65,7 @@ public class App {
   }
 
   public static void main(String[] args) throws Exception {
-    Config c = parseArgs(args);
+    var c = Config.parse(args);
     try (Connection conn = DriverManager.getConnection("jdbc:duckdb:");
         Statement stmt = conn.createStatement()) {
       stmt.execute("INSTALL ducklake");
@@ -117,11 +75,11 @@ public class App {
       stmt.execute("LOAD postgres");
       stmt.execute("LOAD httpfs");
 
-      if (c.lake().equals("local")) {
+      if (c.lake() == Config.LakeType.LOCAL) {
         // The lake was seeded inside docker, where its stored data_path is
         // /data/.... From the host, override it with the host-side path
         // (see lakes/local/README.md).
-        String p = c.localPath().replace("'", "''");
+        String p = c.localPath().get().replace("'", "''");
         stmt.execute("ATTACH 'ducklake:" + p + "' AS lake "
             + "(DATA_PATH '" + p + ".files/', OVERRIDE_DATA_PATH true)");
       } else {
