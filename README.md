@@ -1,9 +1,6 @@
 # ducklake examples for cm2027
 
-> [!NOTE]
-> TODO: explain better how to use & restructure
-
-In this repository you will find examples for how to use ducklake.
+In this repository you will find examples for how to use a ducklake.
 
 There are multiple different ways of running ducklake, this repo showcases two different ways:
 
@@ -11,90 +8,103 @@ There are multiple different ways of running ducklake, this repo showcases two d
 - with postgresql as the meta store and an s3 compatible object store as the raw storage, see [`lakes/local-pg-s3/`](lakes/local-pg-s3/)
 
 > [!NOTE]
-> s3 is an aws service and costs, but there are several open source ones that have an compatible API.
+> s3 is an AWS service and costs, but there are several open source ones that have an compatible API.
 > minio was the most used one for a while, but it has recently (last year) been deprecated and is unmaintained.
 > Therefore we will use [`garage`](https://garagehq.deuxfleurs.fr/quick_start/index.html) for this example, which like minio is an open source s3 compatible object store.
 
-For simple reproducability `docker` with compose v2 (`docker compose`) is used.
-Client examples in `Java` and `Python` live under [`cmd/`](cmd/).
+## Prerequisites
 
-## Requirements
+- `docker` with `docker-compose` (bundled if you use [`docker-desktop`](https://www.docker.com/products/docker-desktop/)).
+- To run the **Python** client: `python3` (3.10+).
+- To run the **Java** client: JDK 17+.
 
-- `git` and `docker` with compose v2. On Windows that means
-  [Docker Desktop](https://www.docker.com/products/docker-desktop/) with Linux
-  containers (or docker-ce installed in WSL2); on macOS/Linux, Docker Engine (or Desktop) is fine.
-- Nothing else for the lakes: no `.env` file, no cloud accounts. All
-  credentials are hardcoded dev defaults (do NOT use in production).
-- To run the **Python** client: `python3` (3.10+). A venv is created below.
-- To run the **Java** client: JDK 17+ and Maven (`mvn -version`).
+## Quickstart
 
-## Quickstart macOS / Linux (bash)
+This quickstart will help you get started by setting up a ducklake in two different ways. The first example uses the local filesystem for the raw data and a duckdb for the metadata while then second one uses an s3 compatible object store for the raw data and an postgres database for the meta data.
+
+### ducklake on local filesystem
 
 ```bash
-# 0. clone and enter the repo
-git clone <this-repo> && cd cm2027-ducklake
-
-# 1. local lake: create + seed it
-mkdir -p lakes/local/data   # so the ./data bind mount is host-owned, not root
-docker compose -f lakes/local/compose.yaml up init
-
-# 2. postgres + S3 lake: infra, bucket, then seed
-cd lakes/local-pg-s3
-docker compose up -d postgres garage
-./scripts/garage-init.sh
-docker compose run --rm seed
-cd ../..
-
-# 3a. python client (from the repo root)
-python3 -m venv /tmp/ducklake-venv
-/tmp/ducklake-venv/bin/pip install -r cmd/python-example/requirements.txt
-/tmp/ducklake-venv/bin/python cmd/python-example/main.py            # local lake
-/tmp/ducklake-venv/bin/python cmd/python-example/main.py --lake pg  # postgres+S3 lake
-
-# 3b. java client (from the repo root; pick one)
-mvn -f cmd/java-example/pom.xml exec:java -Dexec.args="--lake local"
-mvn -f cmd/java-example/pom.xml exec:java -Dexec.args="--lake pg"
+docker compose -f lakes/local/compose.yaml up
 ```
 
-Each client attaches the lake, writes a check-in row, reads it back, and shows
-`snapshots()` + time travel.
+#### Teardown
 
-## Quickstart – Windows (PowerShell)
-
-```powershell
-# 0. clone and enter the repo
-git clone <this-repo>; cd cm2027-ducklake
-
-# 1. local lake: create + seed it
-New-Item -ItemType Directory -Force lakes/local/data | Out-Null
-docker compose -f lakes/local/compose.yaml up init
-
-# 2. postgres + S3 lake: infra, bucket, then seed
-cd lakes/local-pg-s3
-docker compose up -d postgres garage
-.\scripts\garage-init.ps1
-docker compose run --rm seed
-cd ..\..
-
-# 3a. python client (from the repo root)
-py -m venv $env:TEMP\ducklake-venv
-$env:TEMP\ducklake-venv\Scripts\pip install -r cmd\python-example\requirements.txt
-$env:TEMP\ducklake-venv\Scripts\python.exe cmd\python-example\main.py            # local lake
-$env:TEMP\ducklake-venv\Scripts\python.exe cmd\python-example\main.py --lake pg  # postgres+S3 lake
-
-# 3b. java client (from the repo root; pick one)
-mvn -f cmd/java-example/pom.xml exec:java -Dexec.args="--lake local"
-mvn -f cmd/java-example/pom.xml exec:java -Dexec.args="--lake pg"
+```bash
+docker compose -f lakes/local/compose.yaml down
 ```
+
+### ducklake on an object store + postgres for meta
+
+```bash
+docker compose -f lakes/local-pg-s3/compose.yaml up
+```
+
+#### Teardown
 
 > [!NOTE]
-> Run the clients from the **repo root**: the default `--local-path`
-> (`lakes/local/data/...`) resolves relative to where you run them.
+> If you want to run the example clients, tear it down after running them, since they need to be able to access both postgres and s3.
 
-## Details
+```bash
+docker compose -f lakes/local-pg-s3/compose.yaml down
+# append -v to remove the data.
+```
 
-Data paths, time travel, reset, and host-vs-container hostnames are in each
-lake's `README.md` ([`lakes/local/`](lakes/local/),
-[`lakes/local-pg-s3/`](lakes/local-pg-s3/)); client flags and venv notes are in
-[`cmd/python-example/`](cmd/python-example/) and
-[`cmd/java-example/`](cmd/java-example/).
+### Example clients
+
+#### Python
+
+To run the python example client, go into the [`./cmd/python-example/`](./cmd/python-example/) directory and create a virtual environment with your preferred method (venv/conda/etc...), for example with venv:
+
+```bash
+# in the ./cmd/python-example/ directory
+python3 -m venv .venv
+# Then activate it, on Linux / MacOS it is done with
+# source .venv/bin/activate
+```
+
+Once in the virtual environment, download the dependencies:
+
+```bash
+# in the ./cmd/python-example/ directory with the virtual environment active
+pip install -r requirements.txt
+```
+
+Then the client example can be run against a specified ducklake.
+
+##### Running against the "local" ducklake
+
+Make sure you have run the [initialization step for the ducklake on local filesystem example](#ducklake-on-local-filesystem).
+
+```bash
+# in the ./cmd/python-example/ directory with the virtual environment active
+python3 ./main.py
+# defaults to the "local" lake, where the data is stored on the local filesystem
+```
+
+##### Running against the ducklake that is using s3 and postgres
+
+To be able to run this, make sure the docker compose (for the local-pg-s3 ducklake) is running, since the services need to be reachable by the client.
+
+```bash
+# in the ./cmd/python-example/ directory with the virtual environment active
+python3 ./main.py --lake pg
+```
+
+#### Java
+
+#### Running against the "local" ducklake
+
+```bash
+# in the ./cmd/java-example/ directory
+./mvnw exec:java -Dexec.args="--lake local"
+```
+
+#### Running against the ducklake that is using s3 and postgres
+
+To be able to run this, make sure the docker compose (for the local-pg-s3 ducklake) is running, since the services need to be reachable by the client.
+
+```bash
+# in the ./cmd/java-example/ directory
+./mvnw exec:java -Dexec.args="--lake pg"
+```

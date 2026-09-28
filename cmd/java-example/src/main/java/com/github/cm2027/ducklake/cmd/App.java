@@ -1,5 +1,8 @@
 package com.github.cm2027.ducklake.cmd;
 
+import java.net.URISyntaxException;
+import java.nio.file.Path;
+
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.ResultSet;
@@ -30,8 +33,18 @@ public class App {
 
   /** Parse --key value / --key=value args (unknown args fail fast). */
   static Config parseArgs(String[] args) {
+    Path appDir = null;
+
+    try {
+      appDir = Path.of(App.class.getProtectionDomain()
+          .getCodeSource()
+          .getLocation()
+          .toURI()).resolve("../../").normalize();
+    } catch (URISyntaxException e) {
+      throw new RuntimeException("unable to get fs path for App class.", e);
+    }
     String lake = "local";
-    String localPath = "lakes/local/data/my_ducklake.ducklake";
+    String localPath = appDir.resolve("../../lakes/local/data/my_ducklake.ducklake").toString();
     for (int i = 0; i < args.length; i++) {
       String[] kv = args[i].split("=", 2);
       String key = kv[0];

@@ -14,8 +14,11 @@ Needs `duckdb` (pip install -r requirements.txt in a venv).
 
 from __future__ import annotations
 
+from pathlib import Path
 import argparse
 import sys
+
+SCRIPT_DIR = Path(__file__).resolve().parent
 
 try:
     import duckdb
@@ -32,9 +35,7 @@ PG_SECRET = (
     "USER 'ducklake', PASSWORD 'ducklake'"
 )
 S3_KEY_ID = "GK0123456789abcdef01234567"
-S3_SECRET_KEY = (
-    "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
-)
+S3_SECRET_KEY = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
 
 
 def main() -> None:
@@ -42,8 +43,8 @@ def main() -> None:
     p.add_argument("--lake", choices=["local", "pg"], default="local")
     p.add_argument(
         "--local-path",
-        default="lakes/local/data/my_ducklake.ducklake",
-        help="catalog file of the local lake (repo-root relative)",
+        default=str(SCRIPT_DIR / "../../lakes/local/data/my_ducklake.ducklake"),
+        help="catalog file",
     )
     a = p.parse_args()
 
@@ -69,10 +70,7 @@ def main() -> None:
             "REGION 'garage');"
         )
         # Postgres catalog.
-        con.execute(
-            "CREATE OR REPLACE SECRET pg_sec (TYPE postgres, "
-            f"{PG_SECRET});"
-        )
+        con.execute(f"CREATE OR REPLACE SECRET pg_sec (TYPE postgres, {PG_SECRET});")
         # DuckLake binding the two together.
         con.execute(
             "CREATE OR REPLACE SECRET lake_sec (TYPE ducklake, METADATA_PATH '', "
